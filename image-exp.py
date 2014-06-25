@@ -47,11 +47,12 @@ class ScoreBox:
         if not self.inbounds((self.x, self.y)) or not self.inbounds(self.bottom_right()):
             print "oob!"
             return big
-        subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))]
+        subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))].copy()
+        subimg -= 128
         if subimg.size <= 0:
             print "empty image!"
             return big
-        return self.weight * sum(sum(subimg))/sum(sum(img))
+        return self.weight * np.sum(subimg)
 
     def inbounds(self, point):
         return 0 <= point[0] <= 1280 and 0 <= point[1] <= 720
@@ -109,8 +110,9 @@ xopt = x0
 
 #xopt, ignore = opt.anneal(objective, x0, lower=0.0, upper=1.0)
 #xopt = opt.fmin(objective, x0)
-xopt_map = opt.basinhopping(objective, x0, stepsize=0.05)
-xopt = xopt_map["x"]
+# xopt_map = opt.basinhopping(objective, x0, stepsize=0.05)
+# xopt = xopt_map["x"]
+xopt = opt.brute(objective, [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)])
 
 print "Result! = " + xopt.__str__()
 

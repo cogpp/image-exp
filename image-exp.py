@@ -7,8 +7,10 @@ import cv2
 import json
 import math
 import sys
+import random
 
 big = 1e20
+all_scores = []
 
 class ScoreBox:
     """This represents a box for weighting the score an image transform
@@ -47,11 +49,12 @@ class ScoreBox:
         if not self.inbounds((self.x, self.y)) or not self.inbounds(self.bottom_right()):
             print "oob!"
             return big
-        subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))].copy()
+        subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))].copy().astype(np.float32)
         subimg -= 128
         if subimg.size <= 0:
             print "empty image!"
             return big
+        all_scores.append(self.weight * np.sum(subimg))
         return self.weight * np.sum(subimg)
 
     def inbounds(self, point):
@@ -82,8 +85,17 @@ def get_intensity_callback(event,x,y,flags,image):
         print(image[y,x])
         print("---")
 
+def get_intensity_callback(event,x,y,flags,image):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print(x)
+        print(y)
+        print(image[y,x])
+        print("---")
+
 gab = cv2.imread('resources/tennis-b-gab.jpg', 0).astype(float)
 face = cv2.imread('resources/facebreadcrumb.jpg', 0).astype(float)
+
+face *= face
 
 img = cv2.multiply(gab, face)
 img = img / np.max(img) * 255
@@ -92,9 +104,9 @@ img = img.astype(np.uint8)
 
 score_template = load_template()
 
-x0 = np.array([0.6, 0.5, 1.0])
 
-debug = True
+
+debug = False
 
 def objective(xs):
     new_boxes = transform_boxes(score_template, xs)
@@ -106,23 +118,32 @@ def objective(xs):
         cv2.waitKey(1)
     return score_boxes(new_boxes, img) #+ 0.1 + sci2.logit(1-xs[2])
 
-xopt = x0
 
-#xopt, ignore = opt.anneal(objective, x0, lower=0.0, upper=1.0)
-#xopt = opt.fmin(objective, x0)
-# xopt_map = opt.basinhopping(objective, x0, stepsize=0.05)
-# xopt = xopt_map["x"]
-xopt = opt.brute(objective, [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)])
+xopt_best = []
+best_score = big
+for i in range(1, 100):
+    x0 = np.array([random.random(), random.random(), random.random()])
+    #xopt, ignore = opt.anneal(objective, x0, lower=0.0, upper=1.0)
+    xopt = opt.fmin(objective, x0)
+    new_boxes = transform_boxes(score_template, xopt)
+    score = score_boxes(new_boxes, img)
+    if score < best_score:
+        xopt_best = xopt
+        best_score = score
+    # xopt_map = opt.basinhopping(objective, x0, stepsize=0.05)
+    # xopt = xopt_map["x"]
+    #xopt = opt.brute(objective, [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)])
 
 print "Result! = " + xopt.__str__()
 
 
 
-for score_boxe in transform_boxes(score_template, xopt):
+for score_boxe in transform_boxes(score_template, xopt_best):
     print "Transformed Box = " + score_boxe.__str__()
     print score_boxe.score(img)
     score_boxe.draw(img)
 
-cv2.imshow('image', img )
+cv2.imshow('image', img)
+cv2.setMouseCallback('image', get_intensity_callback, img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()

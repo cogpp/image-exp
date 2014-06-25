@@ -11,10 +11,10 @@ def get_intensity_callback(event,x,y,flags,image):
 def create_breadcrumb_map(faces, height, width):
     breadcrumby, breadcrumbx = numpy.mgrid[0:height, 0:width]
     breadcrumb = numpy.zeros((height, width), numpy.float)
-    for (x,y,w,h) in faces:
-        x_centre = x+w/2
-        y_centre = y+h/2
-        breadcrumb -= numpy.sqrt(((x_centre-breadcrumbx)**2 + (y_centre-breadcrumby)**2).astype(float))
+    for (x_face, y_face, width_face, height_face) in faces:
+        x_face_centre = x_face+width_face/2
+        y_face_centre = y_face+height_face/2
+        breadcrumb -= numpy.sqrt(numpy.maximum(abs(breadcrumbx - x_face_centre) - width_face / 2, 0) ** 2 + numpy.maximum(abs(breadcrumby - y_face_centre) - height_face / 2, 0)**2).astype(float)
     breadcrumb -= numpy.min(breadcrumb)
     breadcrumb /= numpy.max(breadcrumb)
     return breadcrumb
@@ -27,7 +27,6 @@ def get_breadcrumb_map_to_faces(imageLocation):
     return create_breadcrumb_map(faces, height, width)
 
 breadcrumb = get_breadcrumb_map_to_faces('resources/tennis-b.jpg')
-breadcrumb *= 255
 
 cv2.imshow('breadcrumb', breadcrumb)
 cv2.setMouseCallback('breadcrumb', get_intensity_callback, breadcrumb)

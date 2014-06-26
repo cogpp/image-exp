@@ -52,7 +52,7 @@ class ScoreBox:
             print "oob!"
             return big
         subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))].copy()
-        subimg -= 128
+        # subimg -= 128
         if subimg.size <= 0:
             print "empty image!"
             return big
@@ -62,7 +62,7 @@ class ScoreBox:
     def inbounds(self):
         height, width = img.shape
         bottom_right_x, bottom_right_y = self.bottom_right()
-        return 0 <= self.x <= width and 0 <= self.y <= height and 0 <= bottom_right_x <= width and 0 <= bottom_right_y <= height
+        return 0 <= self.x <= width and 0 <= self.y <= height and bottom_right_x <= width and bottom_right_y <= height
 
     def transform(self, xs):
         height, width = img.shape
@@ -91,41 +91,60 @@ def get_intensity_callback(event,x,y,flags,image):
 
 def objective(xs):
     new_boxes = transform_boxes(score_template, xs)
-    if True:
+    if False:
         img_temp = img.copy()
         img_temp -= np.min(img_temp)
-        img_temp /= np.max(img_temp)
+        if (np.min(img_temp) != np.min(img_temp)):
+            img_temp /= np.max(img_temp)
         for box in new_boxes:
             box.draw(img_temp)
         cv2.imshow('image-temp', img_temp)
         cv2.waitKey(1)
-    return score_boxes(new_boxes, img)
+    return score_boxes(new_boxes, img) #+ 0.1 + sci2.logit(1-xs[2])
 
 def find_interesting_box(imname):
     gab = gabour.gabor_filter_image('resources/images-to-try/' + imname).astype(float)
-    face = facebreadcrums.get_breadcrumb_map_to_faces('resources/images-to-try/' + imname).astype(float)
+    gab-=np.min(gab)
+    gab/=np.max(gab)
+    # cv2.imshow('gab', gab)
+    # cv2.setMouseCallback('gab', get_intensity_callback, gab)
+    # cv2.waitKey(0)
 
-    face *= face
+    face = facebreadcrums.get_breadcrumb_map_to_faces('resources/images-to-try/' + imname).astype(float)
+    if (np.min(face) != np.max(face)):
+        face -= np.min(face)
+        face/=np.max(face)
+    # cv2.imshow('face', face)
+    # cv2.setMouseCallback('face', get_intensity_callback, face)
+    # cv2.waitKey(0)
 
     global img
     img = cv2.multiply(gab, face)
-    img = img / np.max(img) * 255
-    img = img.astype(np.uint8)
+    img-=np.min(img)
+    img/=np.max(img)
+    # cv2.imshow('toopt', img)
+    # cv2.setMouseCallback('toopt', get_intensity_callback, img)
+    # cv2.waitKey(0)
 
     global score_template
     score_template = load_template()
 
     xopt_best = []
     best_score = big
-    for i in range(1, 100):
+    i=0
+    while i<100:
         x0 = np.array([random.random(), random.random(), random.random()])
+        new_boxes = transform_boxes(score_template, x0)
+        if not new_boxes[0].inbounds():
+            continue
         xopt = opt.fmin(objective, x0)
+
         new_boxes = transform_boxes(score_template, xopt)
         score = score_boxes(new_boxes, img)
         if score < best_score:
             xopt_best = xopt
             best_score = score
-
+        i+=1
     print "Result! = " + xopt.__str__()
 
     for score_boxe in transform_boxes(score_template, xopt_best):
@@ -136,9 +155,6 @@ def find_interesting_box(imname):
     score_boxe.draw(orig_image)
     cv2.imwrite('result/' + imname, orig_image)
 
-# os.chdir("resources/images-to-try")
-# for file in glob.glob("*.jpg"):
-#     print file
 for file in os.listdir("resources/images-to-try"):
     print file
     find_interesting_box(file)

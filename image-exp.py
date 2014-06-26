@@ -49,7 +49,7 @@ class ScoreBox:
         if not self.inbounds((self.x, self.y)) or not self.inbounds(self.bottom_right()):
             print "oob!"
             return big
-        subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))].copy().astype(np.float32)
+        subimg = img[int(self.y):(int(self.y+self.height)), int(self.x):(int(self.x+self.width))].copy()
         subimg -= 128
         if subimg.size <= 0:
             print "empty image!"
@@ -89,7 +89,7 @@ def get_intensity_callback(event,x,y,flags,image):
     if event == cv2.EVENT_LBUTTONDOWN:
         print(x)
         print(y)
-        print(image[y,x])
+        print(image[y, x])
         print("---")
 
 gab = cv2.imread('resources/tennis-b-gab.jpg', 0).astype(float)

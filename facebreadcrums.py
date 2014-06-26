@@ -27,6 +27,7 @@ def get_breadcrumb_map_to_faces(imageLocation):
     return create_breadcrumb_map(faces, height, width)
 
 breadcrumb = get_breadcrumb_map_to_faces('resources/tennis-b.jpg')
+breadcrumb *= 255
 
 cv2.imshow('breadcrumb', breadcrumb)
 cv2.setMouseCallback('breadcrumb', get_intensity_callback, breadcrumb)
